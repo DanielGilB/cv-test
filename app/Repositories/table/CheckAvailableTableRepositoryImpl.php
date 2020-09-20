@@ -11,10 +11,6 @@ class CheckAvailableTableRepositoryImpl implements CheckAvailableTableRepository
     {
         $table = Table::find($tableId);
 
-        if (!$table->isFillableSlots($slots)) {
-            throw new InvalidSlotsException();
-        }
-
-        return !$table->hasBookingOnDate($date);
+        return $table->isFillableSlots($slots) && $table->hasNotBookingOnDate($date);
     }
 }
