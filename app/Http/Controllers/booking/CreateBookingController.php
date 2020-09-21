@@ -7,20 +7,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\booking\CreateBookingRequest;
 use App\Http\Resources\Booking as BookingJson;
 use App\Services\booking\CreateBookingService;
-use App\Services\table\CheckAvailableTableService;
+use Illuminate\Http\JsonResponse;
 use Carbon\Carbon;
 
 class CreateBookingController extends Controller
 {
     private $createBookingService;
-    private $checkAvailableTableService;
 
-    public function __construct(
-        CreateBookingService $createBookingService,
-        CheckAvailableTableService $checkAvailableTableService
-    ) {
+    public function __construct(CreateBookingService $createBookingService)
+    {
         $this->createBookingService = $createBookingService;
-        $this->checkAvailableTableService = $checkAvailableTableService;
     }
 
     public function __invoke(CreateBookingRequest $request)
@@ -30,13 +26,14 @@ class CreateBookingController extends Controller
         $name = $request->input('name');
         $tableId = $request->input('tableId');
 
-        $isTableAvailable = $this->checkAvailableTableService->checkById($tableId, $date, $slots);
-
-        if (!$isTableAvailable) {
-            throw new NotAvailableTableException();
+        try {
+            $booking = $this->createBookingService->create($date, $slots, $name, $tableId);
+            return new BookingJson($booking);
+        } catch (NotAvailableTableException $ex) {
+            return response()->json(
+                ['errors' => 'Not available table with this parameters.'],
+                JsonResponse::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
-
-        $booking = $this->createBookingService->create($date, $slots, $name, $tableId);
-        return new BookingJson($booking);
     }
 }
